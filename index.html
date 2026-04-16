@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+  <title>Hospital AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!--
+    style.css  — all visual styling (colours, layout, animations)
+    app.js     — all interactivity (navigation, API calls, rendering)
+    server.js  — backend (Node/Express) — runs separately, not loaded here
+  -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     SIDEBAR
+     Contains: logo, navigation links, recent searches, user row
+══════════════════════════════════════════════════════════ -->
+<div class="sidebar">
+
+  <!-- Top row: logo + new-chat button -->
+  <div class="sidebar-top">
+    <div class="logo">
+      <div class="logo-icon">💊</div>
+      Hospital AI
+    </div>
+    <button class="sidebar-icon-btn" title="New chat" onclick="newChat()">
+      <!-- Pencil icon -->
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Main navigation links -->
+  <div class="sidebar-nav">
+    <div class="nav-item active" id="nav-search" onclick="showSearch()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      Search medicines
+    </div>
+
+    <div class="nav-item" id="nav-inventory" onclick="showInventory()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+      </svg>
+      Inventory
+    </div>
+
+    <div class="nav-item" id="nav-dashboard" onclick="showDashboard()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="6" height="8" rx="1"/><rect x="9" y="3" width="13" height="4" rx="1"/>
+        <rect x="9" y="10" width="13" height="5" rx="1"/><rect x="2" y="14" width="6" height="7" rx="1"/>
+        <rect x="9" y="18" width="13" height="3" rx="1"/>
+      </svg>
+      Dashboard
+    </div>
+
+    <div class="nav-item" id="nav-memory" onclick="showMemory()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a5 5 0 0 1 5 5c0 2.5-1.5 4.5-3.5 5.3V14h2l-3.5 4-3.5-4h2v-1.7C8.5 11.5 7 9.5 7 7a5 5 0 0 1 5-5z"/>
+        <path d="M8 22h8"/><path d="M12 18v4"/>
+      </svg>
+      Memory &amp; Insights
+    </div>
+
+    <div class="nav-item" id="nav-history" onclick="showHistory()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+      </svg>
+      History
+    </div>
+  </div>
+
+  <!-- Recent searches list -->
+  <div class="sidebar-section-label">Recents</div>
+  <div class="recents" id="recents">
+    <!-- Placeholder — removed once the first search is made -->
+    <div id="noRecents" style="color:var(--text-muted);font-style:italic;font-size:12px;padding:4px 10px;">
+      No searches yet
+    </div>
+  </div>
+
+  <hr class="sidebar-divider" />
+
+  <!-- User row (click to open Profile modal) -->
+  <div class="user-row" onclick="showProfile()" title="View profile">
+    <div class="avatar" id="sidebarAvatar">DV</div>
+    <div class="user-info" style="flex:1;min-width:0;">
+      <div class="name" id="sidebarName">Dinesh Varma</div>
+      <div class="sub">
+        <span class="status-dot"></span>
+        <span id="sidebarRole">Pharmacy Staff</span>
+      </div>
+    </div>
+    <!-- Chevron icon -->
+    <div style="color:var(--text-muted);flex-shrink:0;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </div>
+  </div>
+
+</div><!-- end .sidebar -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     PROFILE MODAL
+     Shown when the user clicks their name in the sidebar.
+     Three tabs: Info, Edit Profile, Security.
+══════════════════════════════════════════════════════════ -->
+<div
+  id="profileOverlay"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(2px);"
+  onclick="closeProfileIfOutside(event)"
+>
+  <div id="profileModal" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:20px;width:440px;max-width:94vw;box-shadow:0 24px 60px rgba(0,0,0,0.4);overflow:hidden;">
+
+    <!-- Header banner with avatar + name -->
+    <div style="background:linear-gradient(135deg,#1e3a5f 0%,#0f1f3d 100%);padding:28px 24px 20px;position:relative;">
+      <button onclick="closeProfile()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.12);border:none;cursor:pointer;width:28px;height:28px;border-radius:50%;color:white;display:flex;align-items:center;justify-content:center;font-size:16px;">×</button>
+      <div style="display:flex;align-items:flex-end;gap:16px;">
+        <div id="profileAvatarLarge" style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;color:white;border:3px solid rgba(255,255,255,0.2);">DV</div>
+        <div>
+          <div id="profileDisplayName" style="font-size:20px;font-weight:600;color:white;">Dinesh Varma</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <span id="profileRoleBadge" style="font-size:12px;background:rgba(59,130,246,0.3);color:#93c5fd;padding:3px 10px;border-radius:20px;font-weight:500;">Pharmacy Staff</span>
+            <span style="font-size:12px;color:rgba(255,255,255,0.5);">· City General Hospital</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats row: Searches / Medicines / Experience -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border);">
+      <div style="padding:14px 0;text-align:center;border-right:1px solid var(--border);">
+        <div style="font-size:20px;font-weight:600;color:var(--accent);" id="statSearches">0</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Searches</div>
+      </div>
+      <div style="padding:14px 0;text-align:center;border-right:1px solid var(--border);">
+        <div style="font-size:20px;font-weight:600;color:var(--green);">28</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Medicines</div>
+      </div>
+      <div style="padding:14px 0;text-align:center;">
+        <div style="font-size:20px;font-weight:600;color:var(--text-primary);">2y</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Experience</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:1px solid var(--border);padding:0 20px;">
+      <button class="profile-tab active" id="tab-info"     onclick="switchTab('info')">Info</button>
+      <button class="profile-tab"        id="tab-edit"     onclick="switchTab('edit')">Edit Profile</button>
+      <button class="profile-tab"        id="tab-security" onclick="switchTab('security')">Security</button>
+    </div>
+
+    <!-- Info tab -->
+    <div id="tabInfo" style="padding:20px 24px;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="profile-row"><div class="profile-label">Full name</div>   <div class="profile-value" id="infoName">Dinesh Varma</div></div>
+        <div class="profile-row"><div class="profile-label">Employee ID</div> <div class="profile-value">#PH-2041</div></div>
+        <div class="profile-row"><div class="profile-label">Role</div>        <div class="profile-value" id="infoRole">Pharmacy Staff</div></div>
+        <div class="profile-row"><div class="profile-label">Department</div>  <div class="profile-value">Pharmacy · Floor 2</div></div>
+        <div class="profile-row"><div class="profile-label">Email</div>       <div class="profile-value" id="infoEmail">dinesh.varma@cityhospital.in</div></div>
+        <div class="profile-row"><div class="profile-label">Shift</div>       <div class="profile-value">Morning · 08:00 – 16:00</div></div>
+      </div>
+    </div>
+
+    <!-- Edit Profile tab -->
+    <div id="tabEdit" style="display:none;padding:20px 24px;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label class="form-label">Full name</label>
+          <input class="form-input" id="editName" value="Dinesh Varma">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label class="form-label">Role</label>
+            <select class="form-input" id="editRole">
+              <option>Pharmacy Staff</option>
+              <option>Senior Pharmacist</option>
+              <option>Head Pharmacist</option>
+              <option>Intern</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Shift</label>
+            <select class="form-input">
+              <option>Morning · 08:00–16:00</option>
+              <option>Afternoon · 14:00–22:00</option>
+              <option>Night · 22:00–06:00</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Email</label>
+          <input class="form-input" id="editEmail" value="dinesh.varma@cityhospital.in">
+        </div>
+        <button onclick="saveProfile()" style="margin-top:4px;background:var(--accent);color:white;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;width:100%;">
+          Save changes
+        </button>
+      </div>
+    </div>
+
+    <!-- Security tab -->
+    <div id="tabSecurity" style="display:none;padding:20px 24px;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div><label class="form-label">Current password</label><input class="form-input" type="password" placeholder="Enter current password"></div>
+        <div><label class="form-label">New password</label>    <input class="form-input" type="password" placeholder="New password"></div>
+        <button style="background:var(--accent);color:white;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;width:100%;">Update password</button>
+        <button onclick="closeProfile()" style="background:var(--red-bg);color:var(--red);border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:500;cursor:pointer;width:100%;">Sign out</button>
+      </div>
+    </div>
+
+  </div>
+</div><!-- end #profileOverlay -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN CONTENT AREA
+     Contains: topbar, alert bar, chat/panels, input box
+══════════════════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div style="display:flex;align-items:center;">
+      <span class="topbar-title" id="topbarTitle">Search medicines</span>
+      <span class="topbar-badge" id="topbarBadge">AI Powered</span>
+    </div>
+    <div class="topbar-right">
+      <!-- Dark / Light toggle -->
+      <div class="theme-toggle" onclick="toggleTheme()">
+        <button class="theme-btn active" id="btn-dark"  title="Dark mode">🌙</button>
+        <button class="theme-btn"        id="btn-light" title="Light mode">☀️</button>
+      </div>
+      <!-- Settings button -->
+      <button class="sidebar-icon-btn" title="Settings" style="margin-left:4px;" onclick="showSettings()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </div><!-- end .topbar -->
+
+  <!-- Low-stock alert banner (shown in Inventory view) -->
+  <div class="alert-bar" id="alertBar" style="display:none;">
+    ⚠️ <strong>Insulin</strong> stock is critically low (5 units). Consider restocking.
+  </div>
+
+  <!-- ── Scrollable area that holds the active panel ── -->
+  <div class="chat-area" id="chatArea">
+
+    <!-- ── EMPTY STATE (shown when no search has been made yet) ── -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">💊</div>
+      <h1>What are you working on?</h1>
+      <p>Search medicines, check inventory, or view memory insights.</p>
+      <!-- Quick-search chips -->
+      <div class="empty-chips">
+        <div class="empty-chip" onclick="quickSearch('paracetamol')">Paracetamol</div>
+        <div class="empty-chip" onclick="quickSearch('insulin')">Insulin</div>
+        <div class="empty-chip" onclick="quickSearch('dolo 650')">Dolo 650</div>
+        <div class="empty-chip" onclick="quickSearch('amoxicillin')">Amoxicillin</div>
+      </div>
+    </div>
+
+    <!-- ── MESSAGES (AI chat bubbles) ── -->
+    <div class="messages" id="messages" style="display:none;"></div>
+
+    <!-- ══════════════════════════════════════════════════════
+         INVENTORY PANEL
+         Static list of medicines with filter controls.
+         In a real app this would be fetched from /medicines.
+    ══════════════════════════════════════════════════════ -->
+    <div class="panel" id="inventoryPanel" style="display:none;">
+      <div class="panel-header">
+        <div class="panel-title">Inventory</div>
+        <div style="font-size:12px;color:var(--text-muted);">Last updated: just now</div>
+      </div>
+
+      <!-- Text filter -->
+      <input
+        class="search-input"
+        placeholder="Filter medicines by name..."
+        oninput="filterInventory(this.value)"
+      >
+
+      <!-- Status filter buttons -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="inv-filter active-filter" onclick="filterByStatus('all',this)">All (28)</button>
+        <button class="inv-filter" onclick="filterByStatus('ok',this)">In Stock (18)</button>
+        <button class="inv-filter" onclick="filterByStatus('low',this)">Low Stock (6)</button>
+        <button class="inv-filter" onclick="filterByStatus('zero',this)">Out of Stock (4)</button>
+      </div>
+
+      <!-- Medicine cards — data-name is used for text filter, data-status for status filter -->
+      <div id="invList">
+
+        <span class="section-tag">Analgesics &amp; Antipyretics</span>
+        <div class="med-card" data-name="paracetamol 500mg" data-status="ok">
+          <div><div class="med-name">Paracetamol 500mg</div><div class="med-meta"><span>📍 Block A · Shelf 3</span><span>Batch #PA2024 · Exp: Mar 2026</span></div></div>
+          <div class="med-badge stock-ok">120 units</div>
+        </div>
+        <div class="med-card" data-name="dolo 650" data-status="zero">
+          <div><div class="med-name">Dolo 650</div><div class="med-meta"><span>📍 Block C · Shelf 1</span><span>Batch #DL2024 · Exp: Dec 2025</span></div></div>
+          <div class="med-badge stock-zero">Out of Stock</div>
+        </div>
+        <div class="med-card" data-name="ibuprofen 400mg" data-status="ok">
+          <div><div class="med-name">Ibuprofen 400mg</div><div class="med-meta"><span>📍 Block A · Shelf 4</span><span>Batch #IB2024 · Exp: Aug 2026</span></div></div>
+          <div class="med-badge stock-ok">85 units</div>
+        </div>
+        <div class="med-card" data-name="aspirin 75mg" data-status="low">
+          <div><div class="med-name">Aspirin 75mg</div><div class="med-meta"><span>📍 Block A · Shelf 5</span><span>Batch #AS2024 · Exp: Oct 2025</span></div></div>
+          <div class="med-badge stock-low">8 units · Low</div>
+        </div>
+        <div class="med-card" data-name="diclofenac 50mg" data-status="ok">
+          <div><div class="med-name">Diclofenac 50mg</div><div class="med-meta"><span>📍 Block A · Shelf 6</span><span>Batch #DC2024 · Exp: Jan 2027</span></div></div>
+          <div class="med-badge stock-ok">54 units</div>
+        </div>
+
+        <span class="section-tag" style="display:block;padding-top:10px;">Antibiotics</span>
+        <div class="med-card" data-name="amoxicillin 250mg" data-status="ok">
+          <div><div class="med-name">Amoxicillin 250mg</div><div class="med-meta"><span>📍 Block A · Shelf 7</span><span>Batch #AM2024 · Exp: Apr 2026</span></div></div>
+          <div class="med-badge stock-ok">68 units</div>
+        </div>
+        <div class="med-card" data-name="azithromycin 500mg" data-status="low">
+          <div><div class="med-name">Azithromycin 500mg</div><div class="med-meta"><span>📍 Block B · Shelf 1</span><span>Batch #AZ2024 · Exp: Jun 2026</span></div></div>
+          <div class="med-badge stock-low">9 units · Low</div>
+        </div>
+        <div class="med-card" data-name="ciprofloxacin 500mg" data-status="ok">
+          <div><div class="med-name">Ciprofloxacin 500mg</div><div class="med-meta"><span>📍 Block B · Shelf 2</span><span>Batch #CF2024 · Exp: Sep 2026</span></div></div>
+          <div class="med-badge stock-ok">42 units</div>
+        </div>
+        <div class="med-card" data-name="metronidazole 400mg" data-status="ok">
+          <div><div class="med-name">Metronidazole 400mg</div><div class="med-meta"><span>📍 Block B · Shelf 3</span><span>Batch #MZ2024 · Exp: Nov 2026</span></div></div>
+          <div class="med-badge stock-ok">37 units</div>
+        </div>
+        <div class="med-card" data-name="doxycycline 100mg" data-status="zero">
+          <div><div class="med-name">Doxycycline 100mg</div><div class="med-meta"><span>📍 Block B · Shelf 4</span><span>Batch #DX2024 · Exp: Feb 2026</span></div></div>
+          <div class="med-badge stock-zero">Out of Stock</div>
+        </div>
+
+        <span class="section-tag" style="display:block;padding-top:10px;">Diabetes &amp; Hormones</span>
+        <div class="med-card" data-name="metformin 500mg" data-status="low">
+          <div><div class="med-name">Metformin 500mg</div><div class="med-meta"><span>📍 Block D · Shelf 2</span><span>Batch #MT2024 · Exp: Jul 2026</span></div></div>
+          <div class="med-badge stock-low">12 units · Low</div>
+        </div>
+        <div class="med-card" data-name="insulin rapid" data-status="low">
+          <div><div class="med-name">Insulin (Rapid)</div><div class="med-meta"><span>📍 Block B · Cold Storage</span><span>Batch #IN2024 · Exp: Jun 2025</span></div></div>
+          <div class="med-badge stock-low">5 units · Low</div>
+        </div>
+        <div class="med-card" data-name="glimepiride 2mg" data-status="ok">
+          <div><div class="med-name">Glimepiride 2mg</div><div class="med-meta"><span>📍 Block D · Shelf 3</span><span>Batch #GL2024 · Exp: May 2026</span></div></div>
+          <div class="med-badge stock-ok">60 units</div>
+        </div>
+        <div class="med-card" data-name="levothyroxine 50mcg" data-status="ok">
+          <div><div class="med-name">Levothyroxine 50mcg</div><div class="med-meta"><span>📍 Block D · Shelf 4</span><span>Batch #LV2024 · Exp: Oct 2026</span></div></div>
+          <div class="med-badge stock-ok">45 units</div>
+        </div>
+
+        <span class="section-tag" style="display:block;padding-top:10px;">Cardiovascular</span>
+        <div class="med-card" data-name="amlodipine 5mg" data-status="ok">
+          <div><div class="med-name">Amlodipine 5mg</div><div class="med-meta"><span>📍 Block C · Shelf 2</span><span>Batch #AML2024 · Exp: Aug 2026</span></div></div>
+          <div class="med-badge stock-ok">78 units</div>
+        </div>
+        <div class="med-card" data-name="atorvastatin 20mg" data-status="ok">
+          <div><div class="med-name">Atorvastatin 20mg</div><div class="med-meta"><span>📍 Block C · Shelf 3</span><span>Batch #AT2024 · Exp: Dec 2026</span></div></div>
+          <div class="med-badge stock-ok">92 units</div>
+        </div>
+        <div class="med-card" data-name="enalapril 5mg" data-status="zero">
+          <div><div class="med-name">Enalapril 5mg</div><div class="med-meta"><span>📍 Block C · Shelf 5</span><span>Batch #EN2024 · Exp: Jan 2026</span></div></div>
+          <div class="med-badge stock-zero">Out of Stock</div>
+        </div>
+        <div class="med-card" data-name="clopidogrel 75mg" data-status="low">
+          <div><div class="med-name">Clopidogrel 75mg</div><div class="med-meta"><span>📍 Block C · Shelf 6</span><span>Batch #CL2024 · Exp: Apr 2026</span></div></div>
+          <div class="med-badge stock-low">7 units · Low</div>
+        </div>
+
+        <span class="section-tag" style="display:block;padding-top:10px;">Gastrointestinal</span>
+        <div class="med-card" data-name="omeprazole 20mg" data-status="ok">
+          <div><div class="med-name">Omeprazole 20mg</div><div class="med-meta"><span>📍 Block E · Shelf 1</span><span>Batch #OM2024 · Exp: Nov 2026</span></div></div>
+          <div class="med-badge stock-ok">110 units</div>
+        </div>
+        <div class="med-card" data-name="pantoprazole 40mg" data-status="ok">
+          <div><div class="med-name">Pantoprazole 40mg</div><div class="med-meta"><span>📍 Block E · Shelf 2</span><span>Batch #PN2024 · Exp: Jun 2027</span></div></div>
+          <div class="med-badge stock-ok">74 units</div>
+        </div>
+        <div class="med-card" data-name="ondansetron 4mg" data-status="ok">
+          <div><div class="med-name">Ondansetron 4mg</div><div class="med-meta"><span>📍 Block E · Shelf 3</span><span>Batch #ON2024 · Exp: Feb 2027</span></div></div>
+          <div class="med-badge stock-ok">30 units</div>
+        </div>
+
+        <span class="section-tag" style="display:block;padding-top:10px;">Respiratory &amp; Allergy</span>
+        <div class="med-card" data-name="cetirizine 10mg" data-status="ok">
+          <div><div class="med-name">Cetirizine 10mg</div><div class="med-meta"><span>📍 Block F · Shelf 1</span><span>Batch #CT2024 · Exp: Jul 2026</span></div></div>
+          <div class="med-badge stock-ok">95 units</div>
+        </div>
+        <div class="med-card" data-name="montelukast 10mg" data-status="ok">
+          <div><div class="med-name">Montelukast 10mg</div><div class="med-meta"><span>📍 Block F · Shelf 2</span><span>Batch #MN2024 · Exp: Oct 2026</span></div></div>
+          <div class="med-badge stock-ok">48 units</div>
+        </div>
+        <div class="med-card" data-name="salbutamol 2mg" data-status="zero">
+          <div><div class="med-name">Salbutamol 2mg</div><div class="med-meta"><span>📍 Block F · Shelf 3</span><span>Batch #SB2024 · Exp: May 2026</span></div></div>
+          <div class="med-badge stock-zero">Out of Stock</div>
+        </div>
+
+        <span class="section-tag" style="display:block;padding-top:10px;">Vitamins &amp; Supplements</span>
+        <div class="med-card" data-name="vitamin d3" data-status="ok">
+          <div><div class="med-name">Vitamin D3 60,000 IU</div><div class="med-meta"><span>📍 Block G · Shelf 1</span><span>Batch #VD2024 · Exp: Dec 2026</span></div></div>
+          <div class="med-badge stock-ok">200 units</div>
+        </div>
+        <div class="med-card" data-name="vitamin b12" data-status="ok">
+          <div><div class="med-name">Vitamin B12 500mcg</div><div class="med-meta"><span>📍 Block G · Shelf 2</span><span>Batch #VB2024 · Exp: Aug 2027</span></div></div>
+          <div class="med-badge stock-ok">150 units</div>
+        </div>
+        <div class="med-card" data-name="calcium carbonate 500mg" data-status="low">
+          <div><div class="med-name">Calcium Carbonate 500mg</div><div class="med-meta"><span>📍 Block G · Shelf 3</span><span>Batch #CA2024 · Exp: Mar 2026</span></div></div>
+          <div class="med-badge stock-low">11 units · Low</div>
+        </div>
+
+      </div><!-- end #invList -->
+    </div><!-- end #inventoryPanel -->
+
+
+    <!-- ══════════════════════════════════════════════════════
+         DASHBOARD PANEL
+         Stats overview + stock bar charts for key medicines.
+    ══════════════════════════════════════════════════════ -->
+    <div class="panel" id="dashboardPanel" style="display:none;">
+      <div class="panel-header">
+        <div class="panel-title">Dashboard</div>
+        <div style="font-size:12px;color:var(--text-muted);">April 2026</div>
+      </div>
+
+      <!-- Stat cards grid -->
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Total Medicines</div><div class="stat-value">28</div></div>
+        <div class="stat-card"><div class="stat-label">In Stock</div>        <div class="stat-value green">18</div></div>
+        <div class="stat-card"><div class="stat-label">Out of Stock</div>    <div class="stat-value red">4</div></div>
+        <div class="stat-card"><div class="stat-label">Low Stock</div>       <div class="stat-value yellow">6</div></div>
+        <div class="stat-card"><div class="stat-label">Total Searches</div>  <div class="stat-value blue" id="totalSearchesDisplay">0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Units</div>     <div class="stat-value">1,904</div></div>
+      </div>
+
+      <!-- Horizontal bar chart (manual, CSS-driven) -->
+      <div class="panel-title" style="font-size:15px;margin-bottom:12px;">Stock overview</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:13px;color:var(--text-secondary);width:150px;">Paracetamol 500mg</div>
+          <div style="flex:1;height:6px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;"><div style="width:80%;height:100%;background:var(--green);border-radius:4px;"></div></div>
+          <div style="font-size:12px;color:var(--text-muted);width:60px;text-align:right;">120 / 150</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:13px;color:var(--text-secondary);width:150px;">Vitamin D3</div>
+          <div style="flex:1;height:6px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;"><div style="width:100%;height:100%;background:var(--green);border-radius:4px;"></div></div>
+          <div style="font-size:12px;color:var(--text-muted);width:60px;text-align:right;">200 / 200</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:13px;color:var(--text-secondary);width:150px;">Metformin 500mg</div>
+          <div style="flex:1;height:6px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;"><div style="width:12%;height:100%;background:var(--yellow);border-radius:4px;"></div></div>
+          <div style="font-size:12px;color:var(--text-muted);width:60px;text-align:right;">12 / 100</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:13px;color:var(--text-secondary);width:150px;">Insulin (Rapid)</div>
+          <div style="flex:1;height:6px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;"><div style="width:5%;height:100%;background:var(--yellow);border-radius:4px;"></div></div>
+          <div style="font-size:12px;color:var(--text-muted);width:60px;text-align:right;">5 / 100</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:13px;color:var(--text-secondary);width:150px;">Dolo 650</div>
+          <div style="flex:1;height:6px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;"><div style="width:0%;height:100%;background:var(--red);border-radius:4px;"></div></div>
+          <div style="font-size:12px;color:var(--text-muted);width:60px;text-align:right;">0 / 80</div>
+        </div>
+      </div>
+    </div><!-- end #dashboardPanel -->
+
+
+    <!-- ══════════════════════════════════════════════════════
+         MEMORY & INSIGHTS PANEL
+         Dynamically populated by renderMemoryPanel() in app.js
+    ══════════════════════════════════════════════════════ -->
+    <div class="panel" id="memoryPanel" style="display:none;">
+      <div class="panel-header">
+        <div class="panel-title">Memory &amp; Insights</div>
+        <div style="font-size:12px;color:var(--accent);font-weight:500;">🧠 Powered by Hindsight</div>
+      </div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.6;">
+        The AI agent learns from every query. Medicines searched frequently that are running low are flagged for restock automatically.
+      </div>
+
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:10px;">🔥 Smart Restock Predictions</div>
+      <div id="restockList">
+        <div style="color:var(--text-muted);font-size:13px;">Search for medicines to build predictions. The agent will flag high-demand low-stock items here.</div>
+      </div>
+
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin:20px 0 10px;">📊 Search Frequency This Session</div>
+      <div id="freqList">
+        <div style="color:var(--text-muted);font-size:13px;">No searches yet this session.</div>
+      </div>
+
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin:20px 0 10px;">🧠 This Session's Memory</div>
+      <div id="memoryList">
+        <div style="color:var(--text-muted);font-size:13px;">Queries are retained in Hindsight memory and recalled in future sessions to give you personalised responses.</div>
+      </div>
+    </div><!-- end #memoryPanel -->
+
+
+    <!-- ══════════════════════════════════════════════════════
+         HISTORY PANEL
+         Dynamically populated by renderHistory() in app.js
+    ══════════════════════════════════════════════════════ -->
+    <div class="panel" id="historyPanel" style="display:none;">
+      <div class="panel-header">
+        <div class="panel-title">Search History</div>
+        <button onclick="clearHistory()" style="font-size:12px;color:var(--red);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;">
+          Clear all
+        </button>
+      </div>
+      <div id="historyList">
+        <div style="color:var(--text-muted);font-size:14px;padding-top:8px;">No history yet. Start searching!</div>
+      </div>
+    </div><!-- end #historyPanel -->
+
+  </div><!-- end .chat-area -->
+
+
+  <!-- ── CHAT INPUT (always visible at the bottom) ── -->
+  <div style="width:100%;flex-shrink:0;">
+    <div class="input-wrapper">
+      <div class="input-box">
+
+        <!-- Textarea row -->
+        <div class="input-row">
+          <textarea
+            id="msgInput"
+            rows="1"
+            placeholder="Search medicine or speak..."
+            onkeydown="handleKey(event)"
+            oninput="autoResize(this)"
+          ></textarea>
+        </div>
+
+        <!-- Action buttons row -->
+        <div class="input-actions">
+          <div class="input-left">
+            <!-- Voice search button -->
+            <button class="icon-btn" title="Voice search" id="micBtn" onclick="startVoice()">
+              <svg id="micIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8"  y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span style="font-size:12px;color:var(--text-muted);margin-right:2px;">Enter to send</span>
+            <!-- Send button -->
+            <button class="send-btn" id="sendBtn" onclick="send()" title="Send">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"/>
+                <polyline points="5 12 12 5 19 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- end .input-box -->
+      <div style="text-align:center;font-size:11.5px;color:var(--text-muted);margin-top:8px;">
+        Hospital AI may make mistakes. Always verify critical medication information.
+      </div>
+    </div><!-- end .input-wrapper -->
+  </div>
+
+</div><!-- end .main -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SETTINGS MODAL
+══════════════════════════════════════════════════════════ -->
+<div
+  id="settingsOverlay"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(2px);"
+  onclick="closeSettingsIfOutside(event)"
+>
+  <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:20px;width:520px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.4);overflow:hidden;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0;">
+      <div style="font-size:17px;font-weight:600;color:var(--text-primary);">Settings</div>
+      <button onclick="closeSettings()" style="background:var(--bg-tertiary);border:1px solid var(--border);cursor:pointer;width:30px;height:30px;border-radius:50%;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;font-size:17px;">×</button>
+    </div>
+
+    <!-- Body -->
+    <div style="overflow-y:auto;flex:1;padding:22px 24px;">
+
+      <!-- Theme selector -->
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Theme</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <div onclick="setThemeSetting('dark')"  id="theme-dark-card"  style="flex:1;border-radius:10px;padding:12px;cursor:pointer;border:2px solid var(--accent);background:var(--bg-tertiary);text-align:center;"><div style="font-size:20px;margin-bottom:6px;">🌙</div><div style="font-size:13px;font-weight:500;color:var(--text-primary);">Dark</div></div>
+        <div onclick="setThemeSetting('light')" id="theme-light-card" style="flex:1;border-radius:10px;padding:12px;cursor:pointer;border:2px solid var(--border);background:var(--bg-tertiary);text-align:center;"><div style="font-size:20px;margin-bottom:6px;">☀️</div><div style="font-size:13px;font-weight:500;color:var(--text-primary);">Light</div></div>
+      </div>
+
+      <!-- About / status -->
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">About</div>
+      <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;">
+          <span style="font-size:13.5px;color:var(--text-primary);">Version</span>
+          <span style="font-size:13px;color:var(--text-secondary);">2.1.0 · Build 2026.04</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--border);">
+          <span style="font-size:13.5px;color:var(--text-primary);">Server status</span>
+          <span id="serverStatusBadge" style="font-size:13px;color:var(--text-muted);font-weight:500;">● Checking…</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--border);">
+          <span style="font-size:13.5px;color:var(--text-primary);">Searches this session</span>
+          <span id="aboutSearchCount" style="font-size:13px;color:var(--text-secondary);">0</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><!-- end #settingsOverlay -->
+
+
+<!-- Load all frontend logic last so the DOM is ready -->
+<script src="app.js"></script>
+
+</body>
+</html>

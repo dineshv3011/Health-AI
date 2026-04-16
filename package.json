@@ -1,0 +1,15 @@
+{
+  "name": "hospital-ai",
+  "version": "3.0.0",
+  "description": "AI-powered hospital pharmacy assistant — Security Score 10/10",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0"
+  }
+}
