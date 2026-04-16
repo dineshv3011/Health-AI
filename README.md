@@ -38,6 +38,7 @@ Hospital-Ai/
 ## How to Run (Development)
 
 ```bash
+cd "it's location"
 npm install
 cp .env .env.local    # edit .env.local with your real keys
 node server.js
