@@ -1,4 +1,4 @@
-# Hospital AI — Security Score: 10 / 10
+# Hospital AI 
 
 AI-powered hospital pharmacy assistant with full security hardening.
 
